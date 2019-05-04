@@ -1,0 +1,58 @@
+/* I'm okay with you using comments :) 
+Despoina Kotsidou       am:2475	cse32475
+Anastasia Monastiridou  am:2488	cse32488		*/
+
+program example1 
+	declare a, b, c, d, e, i;
+
+	function oneWithTheTooManyCharactersKeep30 (in a, inout c)	
+	
+		b := 3*2;
+		i := 3/2;
+		dowhile 
+
+  			if (i>0) then	// this way also
+  				print i;
+  				loop 
+  				endloop;
+
+  				if (not[a=-5]) then
+  					a := two();
+  					return a
+  				endif;
+
+  			endif;
+
+  			b := 1
+
+		enddowhile (d<0)
+
+	endfunction
+
+	function two ()
+
+		a := 2;
+		b := 1;
+		d := a*b;
+
+		incase
+			when ( a>0 or not[a=1]):
+				input a;
+				b := b*a;;
+				print b;
+
+				if (b>100) then
+					b := b/d
+				else
+					b:= b*d
+				endif;
+
+		endincase;
+
+		return a+b
+
+	endfunction
+
+	print (a+b)
+
+endprogram
