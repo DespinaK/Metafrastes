@@ -1,0 +1,26 @@
+program exams
+	declare a,b;
+	function p1(in x, inout y)
+		declare c, d;
+		function p11(in w, inout z)
+			declare e;
+			function p21(in x)
+				e:=x;
+				z:=w;
+				e := p21(in a);
+				return e
+			endfunction
+ 			e:=z;
+			z:=w;
+			e:= p21(in c);
+			return e
+		endfunction
+		b:=100;
+		c:=p11(in b, inout c);
+		y:=b+c;
+		return a
+	endfunction
+	a:=p1(in a, inoutb)
+endprogram
+		
+
