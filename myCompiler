@@ -88,9 +88,10 @@ class Quad:
         self.z  = z
 
 token       = '' #we will keep the token's value here
-quadList    = []
-temps       = 0
-nextQ = 0
+quadList    = [] # Quad List
+temps       = 0  # How many temporary variables
+nextQ 		= 0	 # Points to next Quad
+varToDec 	= [] # List of variables to declare for .c file
 
 
 def nextQuad():
@@ -107,7 +108,7 @@ def newTemp():
     global temps
     newTemp = 'T_' + str(temps)
     temps += 1
-    #to DO
+    varToDec.append(newTemp)
     return newTemp
 
 def emptylist():
@@ -126,13 +127,38 @@ def backpatch(listToFill, z):
     for quad in listToFill:
         quadList[quad].z = z
 
-def printWHAT():
-    print(quadList[0].op)
-
 def writeToFile():
     global quadList
     for i in quadList:
       print(str(i.label) + ' ' + str(i.op) + ' ' +  str(i.a) + ' ' + str(i.b) + ' ' + str(i.z))
+    for j in varToDec:
+    	print(j)
+
+def writeToC():
+	cName 	= file_to_compile[:-4] + '.c'
+	fileForC = open(cName, 'w')
+	fileForC.write('#include <stdio.h>\n\n')
+	fileForC.write('int main()\n{\n')
+	varSize = len(varToDec)
+	if (varSize > 0):
+		fileForC.write('int ' + varToDec[0] )
+		for i in range(1, varSize):
+			fileForC.write(', ' + varToDec[i])
+	fileForC.write(';\n')
+	for quad in quadList:
+		fileForC.write('L_' + str(quad.label) + ':')
+		if (quad.op == ':='):
+			fileForC.write(str(quad.z) + '=' + str(quad.a) + ';\n')
+		elif quad.op == '+' or quad.op == '-' or quad.op == '/' or quad.op == '*':
+			fileForC.write(str(quad.z) + '=' + str(quad.a) + str(quad.op) + str(quad.b) + ';\n')
+		elif quad.op == '<' or quad.op == '>' or quad.op == '<=' or quad.op == '=' or quad.op == '>=' or quad.op == '<>':
+			fileForC.write('if (' + str(quad.a) + str(quad.op) + str(quad.b) + ')' + ' goto ' + 'L_' + str(quad.z) + ';\n')
+		elif (quad.op == 'jump'):
+			fileForC.write('goto ' + 'L_' + str(quad.z) + ';\n')
+		else:
+			fileForC.write('{}\n')
+	fileForC.write('}')
+	
 
 ########################################################
 #                                                      #
@@ -155,6 +181,7 @@ def program(): #The begining of the syntax analyser.
                 genQuad('halt', '_', '_', '_')
                 genQuad('end_block', program_name, "_", "_")
                 writeToFile()
+                writeToC()
                 print("****** Congratulations ******\nYour code has been compiled without errors. ")
             else:
                 print('File: ', file_to_compile )
@@ -198,10 +225,12 @@ def declaration():
 
 def varlist():
     if token.typ == ID:
-        lex()
+        varToDec.append(token.mylist1)	# add variables to declare to list
+        lex()							
         while token.typ == COMMA:
             lex()
             if token.typ == ID:
+                varToDec.append(token.mylist1)
                 lex()
             else:
                 print('File: ', file_to_compile )
@@ -812,7 +841,7 @@ def factor():
     elif token.typ == ID:
         parid = token.mylist1
         lex()
-        partail = idtail()        # EDW kati paizei 
+        partail = idtail()
         if (partail == ""):
             retval = parid
         else:
