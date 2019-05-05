@@ -133,6 +133,13 @@ def writeToFile():
       print(str(i.label) + ' ' + str(i.op) + ' ' +  str(i.a) + ' ' + str(i.b) + ' ' + str(i.z))
     for j in varToDec:
     	print(j)
+	
+def writeToInt():
+    filename = sys.argv[1][:-4] + '.int'
+    file = open(filename,'w') 
+    global quadList
+    for quad in quadList:
+        file.write(str(quad.op)+' '+ str(quad.arg1)+' '+ str(quad.arg2)+' '+ str(quad.res)+'\n')
 
 def writeToC():
 	cName 	= file_to_compile[:-4] + '.c'
@@ -182,6 +189,7 @@ def program(): #The begining of the syntax analyser.
                 genQuad('end_block', program_name, "_", "_")
                 writeToFile()
                 writeToC()
+		wrietToInt()
                 print("****** Congratulations ******\nYour code has been compiled without errors. ")
             else:
                 print('File: ', file_to_compile )
