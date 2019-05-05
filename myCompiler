@@ -79,6 +79,7 @@ class Token: #Class for defining token, type of "word" found from lex  and used 
         self.mylist1= mylist1  #list of the current word being in process when lex is done 
         self.typ    = typ #the "type" of word found from lex
         self.lin    = lin #current line of file being compiled 
+
 class Quad:
     def __init__(self, label, op, a, b, z):
         self.label = label
@@ -87,12 +88,71 @@ class Quad:
         self.b  = b
         self.z  = z
 
+###########		classes for TABLE 	 #############
+
+class Scope:
+	def __init__(self, entPoint, nestLev, scoPoint):
+		self.entPoint 	= entPoint
+		self.nestLev	= nestLev
+		self.scoPoint	= scoPoint
+		self.currOff	= 12
+
+	def getOffset(self):
+		retval = self.currOff
+		self.currOff += 4
+		return retval
+
+class Argument:
+	def __init__(self, parMode, argPoint):
+		self.parMode 	= parMode
+		self.argPoint	= argPoint
+
+class Entity:
+	def __init__(self, entName, entType, entPoint):
+		self.entName 	= entName
+		self.entType	= entType
+		self.entPoint	= entPoint
+
+class Variable(Entity):
+	def __init__(self, name, vOffset):
+		super().__init__(name, 'VAR', None)
+		self.vOffset 	= vOffset
+
+class Function(Entity):
+	def __init__(self, fType, fQuad, fArg, fFramelen):
+		self.fType 	= fType
+		self.fQuad 	= fQuad
+		self.fArg	= fArg
+		self.fFramelen = fFramelen
+
+class Const(Entity):
+	def __init__(self, val):
+		self.val = val
+
+
+class Paramet(Entity):
+	def __init__(self, parMode, offset):
+		self.parMode = parMode
+		self.offset = offset
+
+class tempVariable(Entity):
+	def __init__(self, offset):
+		self.offset = offset
+
+################		GLOBAL VARIABLES		###############
+
 token       = '' #we will keep the token's value here
 quadList    = [] # Quad List
 temps       = 0  # How many temporary variables
 nextQ 		= 0	 # Points to next Quad
 varToDec 	= [] # List of variables to declare for .c file
+scopeList	= []
+exitList	= []
+startLoopQuad = []
+endLoopQuad = []
 
+
+################################################################
 
 def nextQuad():
     return nextQ
@@ -133,13 +193,15 @@ def writeToFile():
       print(str(i.label) + ' ' + str(i.op) + ' ' +  str(i.a) + ' ' + str(i.b) + ' ' + str(i.z))
     for j in varToDec:
     	print(j)
-	
+
 def writeToInt():
     filename = sys.argv[1][:-4] + '.int'
     file = open(filename,'w') 
     global quadList
     for quad in quadList:
-        file.write(str(quad.op)+' '+ str(quad.arg1)+' '+ str(quad.arg2)+' '+ str(quad.res)+'\n')
+        file.write(str(quad.label) + ': ' + str(quad.op)+' '+ str(quad.a)+' '+ str(quad.b)+' '+ str(quad.z)+'\n')
+
+    file.close()   
 
 def writeToC():
 	cName 	= file_to_compile[:-4] + '.c'
@@ -153,7 +215,7 @@ def writeToC():
 			fileForC.write(', ' + varToDec[i])
 	fileForC.write(';\n')
 	for quad in quadList:
-		fileForC.write('L_' + str(quad.label) + ':')
+		fileForC.write('L_' + str(quad.label) + ': ')
 		if (quad.op == ':='):
 			fileForC.write(str(quad.z) + '=' + str(quad.a) + ';\n')
 		elif quad.op == '+' or quad.op == '-' or quad.op == '/' or quad.op == '*':
@@ -164,8 +226,48 @@ def writeToC():
 			fileForC.write('goto ' + 'L_' + str(quad.z) + ';\n')
 		else:
 			fileForC.write('{}\n')
+
 	fileForC.write('}')
-	
+	fileForC.close()
+
+###########################################################
+#														  #
+#					SYMBOL TABLE						  #
+#														  #
+###########################################################
+
+def entityInsert(newEntity):
+	scopeList[-1].entPoint.append(newEntity)
+
+def argumentIsert(mode):
+	scopeList[-1].entPoint[-1].fArg.append(Argument(mode, None))
+
+def scopeInsert():
+	level = scopeList[-1].nestLev + 1
+	pScope = scopeList[-1]
+	newScope = Scope([], level, pScope)
+	scopeList.append(newScope)
+
+def scopeDelete():
+	# enimerwnw framelength kai diagrafw 
+	return 0
+
+def search(name):
+	if (len(scopeList)) != 0:
+		for i in range(1, len(scopeList)):
+			for entity in scopeList[-i].entPoint:
+				if entity.entName == name:
+					return entity
+
+def addVarEntity(name):
+	offset = scopeList[-1].getOffset()
+	retval = Variable(name, offset)
+	return retval
+
+def addFuncEntity(name, quad):
+	retval = Function('Func', quad, [], 0)
+	return retval
+
 
 ########################################################
 #                                                      #
@@ -183,13 +285,14 @@ def program(): #The begining of the syntax analyser.
         genQuad('begin_block', program_name, "_", "_")
         if token.typ == ID:
             lex()
+            scopeList.append(Scope([], 0, None))
             block()
             if token.typ == ENDPROG:
                 genQuad('halt', '_', '_', '_')
                 genQuad('end_block', program_name, "_", "_")
                 writeToFile()
                 writeToC()
-		wrietToInt()
+                writeToInt()
                 print("****** Congratulations ******\nYour code has been compiled without errors. ")
             else:
                 print('File: ', file_to_compile )
@@ -234,11 +337,13 @@ def declaration():
 def varlist():
     if token.typ == ID:
         varToDec.append(token.mylist1)	# add variables to declare to list
+        entityInsert(addVarEntity(token.mylist1))
         lex()							
         while token.typ == COMMA:
             lex()
             if token.typ == ID:
                 varToDec.append(token.mylist1)
+                entityInsert(addVarEntity(token.mylist1))
                 lex()
             else:
                 print('File: ', file_to_compile )
@@ -254,10 +359,12 @@ def subprogram():
     if token.typ == FUNC:
         lex()
         spname = token.mylist1
-        genQuad('begin_block', spname, '_', '_')
+        quad = genQuad('begin_block', spname, '_', '_')
+        entityInsert(addFuncEntity(token.mylist1, quad))
+        scopeInsert()
         if token.typ == ID:
             lex()
-            funcbody()
+            funcbody(ID)
             if token.typ == ENDFUNC:
                 genQuad('end_block', spname, '_', '_')
                 lex()
@@ -276,15 +383,14 @@ def subprogram():
             print("' function's ID ' missing ")
             exit(0)
         
-
-def funcbody():
-    formalpars()
+def funcbody(name):
+    formalpars(name)
     block()
 
-def formalpars():
+def formalpars(name):
     if token.typ == LEFTPARENTH:
         lex()
-        formalparlist()
+        formalparlist(name)
         if token.typ == RIGHTPARENTH:
             lex()
         else:
@@ -299,9 +405,9 @@ def formalpars():
         exit(0)
 
 
-def formalparlist():
+def formalparlist(name):
     if token.typ == IN or token.typ == INOUT or token.typ == INANDOUT:
-        formalparitem()
+        formalparitem(name)
         if token.typ == IN or token.typ == INOUT or token.typ == INANDOUT:
             print('File: ', file_to_compile )
             print ("ERROR near line", token.lin - 1)
@@ -309,16 +415,19 @@ def formalparlist():
             exit(0)
         while token.typ == COMMA:
             lex()
-            formalparitem()
+            formalparitem(name)
     elif not(token.typ == RIGHTPARENTH):
         print('File: ', file_to_compile )
         print ("ERROR near line", token.lin - 1)
         print ("ERROR: ' in/inout/inandout ' expected")
         exit(0)
 
-def formalparitem():
+def formalparitem(name):
     if token.typ == IN:
         lex()
+        tmpent = search(name)
+        tmpent.fArg.append(argumentIsert('CV', token.mylist1))
+        entityInsert(addVarEntity(token.mylist1))
         if token.typ == ID:
             lex()
         else:
@@ -328,6 +437,9 @@ def formalparitem():
             exit(0)
     elif token.typ == INOUT:
         lex()
+        tmpent = search(name)
+        tmpent.fArg.append(argumentIsert('REF', token.mylist1))
+        entityInsert(addVarEntity(token.mylist1))
         if token.typ == ID:
             lex()
         else:
@@ -337,6 +449,9 @@ def formalparitem():
             exit(0)
     elif token.typ == INANDOUT:
         lex()
+        tmpent = search(name)
+        tmpent.fArg.append(argumentIsert('CP', token.mylist1))
+        entityInsert(addVarEntity(token.mylist1))
         if token.typ == ID:
             lex()
         else:
@@ -528,12 +643,21 @@ def doWhileStat():
         print (" ' dowhile ' expected")
         exit(0)
 
-
 def loopStat():
+    global exitList, startLoopQuad, endLoopQuad
+  
+    exitList.append(None)
     if token.typ == LOOP:
         lex()
+        startLoopQuad.append(nextQuad())
         statements()
+        endLoopQuad.append(nextQuad())
         if token.typ == ENDLOOP:
+            if exitList[-1] != None:
+            	backpatch(exitList[-1], endLoopQuad.pop())
+            else:
+            	genQuad('jump', '_', '_', startLoopQuad.pop())
+            exitList.pop()
             lex()
         else:
             print('File: ', file_to_compile )
@@ -546,15 +670,12 @@ def loopStat():
         print ("ERROR: ' loop ' expected")
         exit(0)
 
-def exitStat():
-    if token.typ == EXIT:
-        lex()
-        genQuad('jump', '_', '_', '_')
-    else:
-        print('File: ', file_to_compile )
-        print ("ERROR near line", token.lin - 1)
-        print ("ERROR: ' exit ' expected")
-        exit(0)
+def exitStat():	# enters if token = EXIT, no need for checking
+    lex()
+    tmp = makelist(nextQuad())
+    genQuad('jump', '_', '_', '_')
+    exitList[-1] = tmp
+    
 
 def forcaseStat():
     if token.typ == FORCASE:
