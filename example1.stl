@@ -6,53 +6,30 @@ program example1
 	declare a, b, c, d, e, i;
 
 	function oneWithTheTooManyCharactersKeep30 (in a, inout c)	
+
+		function two (in b)
 	
-		b := 3*2;
-		i := 3/2;
-		dowhile 
+			b := 3*2;
+			
+			dowhile 
 
-  			if (i>0) then	// this way also
-  				print i;
-  				loop 
-  				endloop;
+	  			if (i>4) then	// this way also
+	  			
 
-  				if (not[a=-5]) then
-  					a := two();
-  					return a
-  				endif;
+	  				if (not[a=-5]) then
+	  					a := two();
+	  					return a
+	  				endif;
 
-  			endif;
+	  			endif;
 
-  			b := 1
+			enddowhile (d<0)
+		endfunction;
 
-		enddowhile (d<0)
+		f := 3;
 
-	endfunction
-
-	function two ()
-
-		a := 2;
-		b := 1;
-		d := a*b;
-
-		incase
-			when ( a>0 or not[a=1]):
-				input a;
-				b := b*a;;
-				print b;
-
-				if (b>100) then
-					b := b/d
-				else
-					b:= b*d
-				endif;
-
-		endincase;
-
-		return a+b
+		return f
 
 	endfunction
-
-	print (a+b)
 
 endprogram
