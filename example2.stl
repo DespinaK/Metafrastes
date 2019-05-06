@@ -1,0 +1,30 @@
+//Despoina Kotsidou       am:2475	cse32475
+//Anastasia Monastiridou  am:2488	cse32488
+
+program test1 //This is a test
+	declare a,b,c,d;
+
+	function f1(in b, inout c)
+
+		declare e;
+
+			if ( not [a<b or a=9] and [a<9] ) then
+				forcase
+					when (a>9) :
+						return a
+					when(b>=4): /* -Comments are cool!
+									-Agreed. */
+						default:    
+							incase
+								endincase
+						enddefault
+				endforcase
+			else
+				loop 
+					a := (a/3)*b+1-c;
+				endloop;
+				return 3
+			endif
+	endfunction
+
+endprogram			
