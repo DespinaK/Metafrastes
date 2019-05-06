@@ -88,6 +88,21 @@ class Quad:
         self.b  = b
         self.z  = z
 
+
+################		GLOBAL VARIABLES		###############
+
+token       = '' #we will keep the token's value here
+quadList    = [] # Quad List
+temps       = 0  # How many temporary variables
+nextQ 		= 0	 # Points to next Quad
+varToDec 	= [] # List of variables to declare for .c file
+scopeList	= []
+exitList	= []
+startLoopQuad = []
+endLoopQuad = []
+
+
+
 ###########		classes for TABLE 	 #############
 
 class Scope:
@@ -116,41 +131,101 @@ class Entity:
 class Variable(Entity):
 	def __init__(self, name, vOffset):
 		super().__init__(name, 'VAR', None)
+		self.name 	= name
 		self.vOffset 	= vOffset
 
 class Function(Entity):
-	def __init__(self, fType, fQuad, fArg, fFramelen):
-		self.fType 	= fType
+	def __init__(self, name, fQuad, fArg, fFramelen):
+		super().__init__(name, 'FUNC', None)
+		self.name 	= name
 		self.fQuad 	= fQuad
 		self.fArg	= fArg
 		self.fFramelen = fFramelen
 
 class Const(Entity):
 	def __init__(self, val):
+		super().__init__(val, 'CON', None)
 		self.val = val
 
 
 class Paramet(Entity):
-	def __init__(self, parMode, offset):
+	def __init__(self, name, parMode, offset):
+		super().__init__(name, 'PAR', None)
 		self.parMode = parMode
 		self.offset = offset
 
 class tempVariable(Entity):
-	def __init__(self, offset):
+	def __init__(self, name, offset):
+		super().__init__(name, 'TEMP', None)
 		self.offset = offset
 
-################		GLOBAL VARIABLES		###############
 
-token       = '' #we will keep the token's value here
-quadList    = [] # Quad List
-temps       = 0  # How many temporary variables
-nextQ 		= 0	 # Points to next Quad
-varToDec 	= [] # List of variables to declare for .c file
-scopeList	= []
-exitList	= []
-startLoopQuad = []
-endLoopQuad = []
+###########################################################
+#														  #
+#					SYMBOL TABLE						  #
+#														  #
+###########################################################
 
+def entityInsert(newEntity):
+	scopeList[-1].entPoint.append(newEntity)
+
+def argumentIsert(mode):
+	scopeList[-1].entPoint[-1].fArg.append(Argument(mode, None))
+
+def scopeInsert():
+	level = scopeList[-1].nestLev + 1
+	pScope = scopeList[-1]
+	newScope = Scope([], level, pScope)
+	scopeList.append(newScope)
+
+def scopeDelete():
+	scopeList.pop() 
+	return
+
+def search(name, enttype):
+	if (len(scopeList)) != 0:
+		for i in range(0, len(scopeList)):
+			for entity in scopeList[-(i+1)].entPoint:
+				if entity.entName == name and entity.entType == enttype:
+					return entity
+
+def addVarEntity(name):
+	offset = scopeList[-1].getOffset()
+	retval = Variable(name, offset)
+	return retval
+
+def addFuncEntity(name, quad):
+	retval = Function(name, quad, [], 0)
+	return retval
+
+def addParEntity(name, parMode):
+	offset = scopeList[-1].getOffset()
+	retval = Paramet(name, parMode, offset)
+	return retval
+
+def addTempEntity(name):
+	offset = scopeList[-1].getOffset()
+	retval = tempVariable(name, offset)
+	return retval
+
+def fillFramelength():
+	if (len(scopeList)) != 0:
+		for i in range(0, len(scopeList)):
+			for entity in scopeList[-(i+1)].entPoint:
+				if entity.entType == 'FUNC':
+					entToFill = entity
+					offset = scopeList[-1].getOffset()
+					entToFill.fFramelen = offset + 4
+					return
+
+def printScopes():
+	for scope in scopeList:
+		print ("SCOPE ")
+		for ent in scope.entPoint:
+			print (ent.entName + ent.entType)
+			if ent.entType == 'FUNC':
+				for i in ent.fArg:
+					print (i.parMode + "  mode")
 
 ################################################################
 
@@ -159,7 +234,6 @@ def nextQuad():
 
 def genQuad(op, x, y, z):
     global nextQ
-    print (nextQ)
     newQuad = Quad(nextQ, op, x, y, z)
     quadList.append(newQuad)
     nextQ += 1
@@ -169,6 +243,7 @@ def newTemp():
     newTemp = 'T_' + str(temps)
     temps += 1
     varToDec.append(newTemp)
+    entityInsert(addTempEntity(newTemp))
     return newTemp
 
 def emptylist():
@@ -186,13 +261,6 @@ def backpatch(listToFill, z):
     global quadList
     for quad in listToFill:
         quadList[quad].z = z
-
-def writeToFile():
-    global quadList
-    for i in quadList:
-      print(str(i.label) + ' ' + str(i.op) + ' ' +  str(i.a) + ' ' + str(i.b) + ' ' + str(i.z))
-    for j in varToDec:
-    	print(j)
 
 def writeToInt():
     filename = sys.argv[1][:-4] + '.int'
@@ -230,45 +298,6 @@ def writeToC():
 	fileForC.write('}')
 	fileForC.close()
 
-###########################################################
-#														  #
-#					SYMBOL TABLE						  #
-#														  #
-###########################################################
-
-def entityInsert(newEntity):
-	scopeList[-1].entPoint.append(newEntity)
-
-def argumentIsert(mode):
-	scopeList[-1].entPoint[-1].fArg.append(Argument(mode, None))
-
-def scopeInsert():
-	level = scopeList[-1].nestLev + 1
-	pScope = scopeList[-1]
-	newScope = Scope([], level, pScope)
-	scopeList.append(newScope)
-
-def scopeDelete():
-	# enimerwnw framelength kai diagrafw 
-	return 0
-
-def search(name):
-	if (len(scopeList)) != 0:
-		for i in range(1, len(scopeList)):
-			for entity in scopeList[-i].entPoint:
-				if entity.entName == name:
-					return entity
-
-def addVarEntity(name):
-	offset = scopeList[-1].getOffset()
-	retval = Variable(name, offset)
-	return retval
-
-def addFuncEntity(name, quad):
-	retval = Function('Func', quad, [], 0)
-	return retval
-
-
 ########################################################
 #                                                      #
 #                 SYNTAX ANALYSER                      #
@@ -290,7 +319,6 @@ def program(): #The begining of the syntax analyser.
             if token.typ == ENDPROG:
                 genQuad('halt', '_', '_', '_')
                 genQuad('end_block', program_name, "_", "_")
-                writeToFile()
                 writeToC()
                 writeToInt()
                 print("****** Congratulations ******\nYour code has been compiled without errors. ")
@@ -364,7 +392,7 @@ def subprogram():
         scopeInsert()
         if token.typ == ID:
             lex()
-            funcbody(ID)
+            funcbody(spname)
             if token.typ == ENDFUNC:
                 genQuad('end_block', spname, '_', '_')
                 lex()
@@ -425,9 +453,9 @@ def formalparlist(name):
 def formalparitem(name):
     if token.typ == IN:
         lex()
-        tmpent = search(name)
-        tmpent.fArg.append(argumentIsert('CV', token.mylist1))
-        entityInsert(addVarEntity(token.mylist1))
+        tmpent = search(name, 'FUNC')
+        tmpent.fArg.append(Argument('CV', token.mylist1))
+        entityInsert(addParEntity(token.mylist1, 'CV'))
         if token.typ == ID:
             lex()
         else:
@@ -437,9 +465,9 @@ def formalparitem(name):
             exit(0)
     elif token.typ == INOUT:
         lex()
-        tmpent = search(name)
-        tmpent.fArg.append(argumentIsert('REF', token.mylist1))
-        entityInsert(addVarEntity(token.mylist1))
+        tmpent = search(name, 'FUNC')
+        tmpent.fArg.append(Argument('REF', token.mylist1))
+        entityInsert(addParEntity(token.mylist1,'RED'))
         if token.typ == ID:
             lex()
         else:
@@ -450,8 +478,8 @@ def formalparitem(name):
     elif token.typ == INANDOUT:
         lex()
         tmpent = search(name)
-        tmpent.fArg.append(argumentIsert('CP', token.mylist1))
-        entityInsert(addVarEntity(token.mylist1))
+        tmpent.fArg.append(Argument('CP', token.mylist1))
+        entityInsert(addParEntity(token.mylist1, 'CP'))
         if token.typ == ID:
             lex()
         else:
@@ -692,7 +720,6 @@ def forcaseStat():
                 if token.typ == RIGHTPARENTH:
                     lex()
                     if token.typ == COLON:
-                        print ("poses fores\n")
                         lex()
                         backpatch(Ctrue, nextQuad())
                         genQuad(':=', '1', '_', temp)
@@ -801,7 +828,12 @@ def incaseStat():
 def returnStat():   # called
     lex()           # if token == return
     exp = expression()
-    genQuad('retv', '_', '_', exp,)
+    genQuad('retv', '_', '_', exp)
+    entityInsert(addTempEntity(exp))
+    #printScopes()
+    fillFramelength()
+    scopeDelete()
+
 
 def printStat():    # called
     lex()           # if token == print
@@ -940,7 +972,7 @@ def expression():
     optionalSign()
     term1 = term()
     while (token.typ == PLUS) or (token.typ == MINUS):
-        op         = addOper()
+        op      = addOper()
         term2 	= term()
         tempLab = newTemp()
         genQuad(op, term1, term2, tempLab)
@@ -975,8 +1007,9 @@ def factor():
             retval = parid
         else:
             genQuad('call', parid, '_', '_')
-            retval = partail
+            retval = parid
     elif token.typ == NUMBER:	# na prosthesw isws arnitikous/thetikous
+        entityInsert(Const(token.mylist1))
         retval = token.mylist1
         lex()
     else:
