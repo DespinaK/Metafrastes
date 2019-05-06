@@ -1,18 +1,23 @@
 program exams
-	declare a, s, a, t;
-		a := 1;
-		while (a+b<1 and b<6)
-			if (t=1) then
-				c:=2;
-			else
-				c:=0;
-			endif;
-			while (a<1)
-				if (a=2) then
-					while (b=1)
-						c:=2
-					endwhile
-				endif;
-			endwhile
-		endwhile
+	declare a, s, t;
+	
+		 if (t=1) then c:=2;
+	 		t := 1;
+	
+	    endif;
+
+	    loop 
+	    	loop
+	    	c:= 4;
+	    	exit;
+	    	k:=2;
+	    	endloop;
+	    	m := 3;
+	    	exit;
+	    	o := 3;
+		endloop;
+	    a :=3 ;
+	    b := 4;
+		
+	
 endprogram
