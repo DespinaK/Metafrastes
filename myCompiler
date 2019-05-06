@@ -130,7 +130,7 @@ class Entity:
 
 class Variable(Entity):
 	def __init__(self, name, vOffset):
-		super().__init__(name, 'VAR', None)
+		super(self).__init__(name, 'VAR', None)
 		self.name 	= name
 		self.vOffset 	= vOffset
 
