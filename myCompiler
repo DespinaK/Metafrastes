@@ -122,7 +122,7 @@ class Argument:
 		self.parMode 	= parMode
 		self.argPoint	= argPoint
 
-class Entity:
+class Entity(object):
 	def __init__(self, entName, entType, entPoint):
 		self.entName 	= entName
 		self.entType	= entType
@@ -130,13 +130,13 @@ class Entity:
 
 class Variable(Entity):
 	def __init__(self, name, vOffset):
-		super(self).__init__(name, 'VAR', None)
+		super(Variable, self).__init__(name, 'VAR', None)
 		self.name 	= name
 		self.vOffset 	= vOffset
 
 class Function(Entity):
 	def __init__(self, name, fQuad, fArg, fFramelen):
-		super().__init__(name, 'FUNC', None)
+		super(Function, self).__init__(name, 'FUNC', None)
 		self.name 	= name
 		self.fQuad 	= fQuad
 		self.fArg	= fArg
@@ -144,19 +144,19 @@ class Function(Entity):
 
 class Const(Entity):
 	def __init__(self, val):
-		super().__init__(val, 'CON', None)
+		super(Const, self).__init__(val, 'CON', None)
 		self.val = val
 
 
 class Paramet(Entity):
 	def __init__(self, name, parMode, offset):
-		super().__init__(name, 'PAR', None)
+		super(Paramet, self).__init__(name, 'PAR', None)
 		self.parMode = parMode
 		self.offset = offset
 
 class tempVariable(Entity):
 	def __init__(self, name, offset):
-		super().__init__(name, 'TEMP', None)
+		super(tempVariable, self).__init__(name, 'TEMP', None)
 		self.offset = offset
 
 
@@ -292,6 +292,12 @@ def writeToC():
 			fileForC.write('if (' + str(quad.a) + str(quad.op) + str(quad.b) + ')' + ' goto ' + 'L_' + str(quad.z) + ';\n')
 		elif (quad.op == 'jump'):
 			fileForC.write('goto ' + 'L_' + str(quad.z) + ';\n')
+		elif(quad.op == 'out'):
+			fileForC.write('printf('+str(quad.z)+')\n')
+		elif(quad.op == 'retv'):
+			fileForC.write('return'+str(quad.z)+'\n')
+		elif(quad.op == 'inp'):
+			fileForC.write('scanf('+str(quad.z)+')\n')
 		else:
 			fileForC.write('{}\n')
 
@@ -883,7 +889,7 @@ def actualparitem():
     elif token.typ == INOUT:
         lex()
         retval = token.mylist1
-        genQuad('par', retval, 'REF', '_')
+        genQuad('S', retval, 'REF', '_')
         if token.typ == ID:
         	lex()
         else:
